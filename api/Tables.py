@@ -27,6 +27,55 @@ class Employee(Base):
     def __repr__(self):
         return "<Employee (name_first='%s' last_name='%s' email='%s') >" % (self.first_name, self.last_name, self.email)
 
+        def authentication(cls, email, password, role):
+        session = Session()
+        if role == "manager":
+
+            try:
+                e_role, = session.query(Manager.profession). \
+                    filter(Manager.password == password, Manager.email == email).one()
+                if e_role == role:
+                    return True
+                else:
+                    return False
+            except exc.NoResultFound as e:
+                return False
+
+        elif role == "branch_manager":
+            try:
+                e_role, = session.query(BranchManager.profession). \
+                    filter(BranchManager.email == email, BranchManager.password == password).one()
+                if e_role == "branch_manager":
+                    return True
+                else:
+                    return False
+            except exc.NoResultFound as e:
+                return False
+
+        elif role == "controller":
+            try:
+                e_role, = session.query(Controller.profession). \
+                    filter(Controller.password == password, Controller.email == email).one()
+                if e_role == "controller":
+                    return True
+                else:
+                    return False
+            except exc.NoResultFound as e:
+                return False
+
+        elif role == "bank_teller":
+            try:
+                e_role, = session.query(BankTeller.profession). \
+                    filter(BankTeller.email == email, BankTeller.password == password).one()
+                if e_role == "bank_teller":
+                    return True
+                else:
+                    return False
+            except exc.NoResultFound as e:
+                return False
+
+    authentication = classmethod(authentication)
+
 
 class Controller(Employee):
     """"
