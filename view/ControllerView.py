@@ -107,7 +107,26 @@ class ControllerView(QWidget):
             qApp.quit()
 
 
+    def on_actualize_btn_clicked(self):
+        if self.valid_btn.isEnabled():
+            self.valid_btn.setEnabled(False)
+            self.update_btn.setDisabled(True)
+            data, closed_b, dif_b = Transaction.get_daily_transaction()
 
+            if data is not None and closed_b is not None:
+                self.populate_model(data, closed_b, dif_b)
+                QMessageBox.information(self, "Actualize", "Actualisation de la table termine")
+            else:
+                QMessageBox.critical(self, "Error", "Impossible d'actulise la table, veillez re-essayer plutard"
+                                                    "ou faite appele a votre DSI")
+            self.update_btn.setEnabled(True)
+            self.valid_btn.setEnabled(True)
+        else:
+            self.update_btn.setDisabled(True)
+            QMessageBox.information(self, "Info", "La table est deja a jour")
+
+
+            
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
