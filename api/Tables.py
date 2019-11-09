@@ -27,7 +27,7 @@ class Employee(Base):
     def __repr__(self):
         return "<Employee (name_first='%s' last_name='%s' email='%s') >" % (self.first_name, self.last_name, self.email)
 
-        def authentication(cls, email, password, role):
+    def authentication(cls, email, password, role):
         session = Session()
         if role == "manager":
 
