@@ -97,6 +97,15 @@ class ControllerView(QWidget):
                 for j, column in enumerate(line):
                     self.model.setItem(i, j, QStandardItem(column))
 
+    def on_valid_btn_clicked(self):
+        self.valid_btn.setEnabled(False)
+        QMessageBox.information(self, "Info", "Cloture de compte journalier effectue avec succes")
+
+        res = QMessageBox.question(self, "Quit app", "Voulez-vous quitter l'application")
+
+        if res == QMessageBox.Yes:
+            qApp.quit()
+
 
 
 if __name__ == '__main__':
