@@ -86,3 +86,25 @@ class Controller(Employee):
         'polymorphic_identity': 'controller'
     }
 
+class Client(Base):
+    """Client Module"""
+
+    __tablename__ = 'clients'
+
+    id = Column(Integer, primary_key=True)
+    balance = Column(Integer, nullable=False, default=0)
+    account_number = Column(String(10), nullable=False)
+    identity_document_number = Column(String(50), nullable=False)
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
+    birth_date = Column(DateTime, nullable=False)
+    birth_location = Column(String(50), nullable=False)
+    nationality = Column(String(50), nullable=False)
+    sex = Column(String(10), nullable=False)
+    account_type = Column(String(50), nullable=False, default="checking account")
+    added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
+
+    # relationship
+    addresses = relationship('ClientAddress', back_populates='client', cascade='all, delete, delete-orphan')
+    transaction = relationship('Transaction', back_populates='client', cascade='all, delete, delete-orphan')
+    
