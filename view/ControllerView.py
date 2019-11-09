@@ -126,7 +126,6 @@ class ControllerView(QWidget):
             QMessageBox.information(self, "Info", "La table est deja a jour")
 
 
-            
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
