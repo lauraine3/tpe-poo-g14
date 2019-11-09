@@ -162,3 +162,98 @@ class ClientAddress(Base):
 
     client = relationship("Client", back_populates='addresses')
 
+
+class BankTeller(Employee):
+    """"
+    BankTeller Module. Inherited from Employee
+    This class represent bank_teller and handle common operations in counter
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'bank_teller'
+    }
+
+    def start_transfer(cls, data):
+        session = Session()
+        if data is None:
+            debited_account = data["debited_account_number"]
+            client_id = Client.get_id_by_account_number(debited_account, session=session)
+            if client_id is not None:
+                client, _ = Client.get_by_account_number(debited_account, exist=True, session=session)
+                if client.balance < data["amount"]:
+                    return False, enum.AMOUNT_ERROR
+                else:
+                    ben_account_number = data["ben_account_number"]
+                    ref = hashlib.sha1("{}{}{}".format(debited_account, ben_account_number,
+                                                       client_id).encode()).hexdigest()
+
+                    trans_info = {
+                        "ref": ref,
+                        "label": data["label"],
+                        "amount": data["amount"],
+                        "trans_type": data["trans_type"]
+                    }
+                    beneficiary_info = {
+                        "beneficiary": data["name"],
+                        "bank_name": data["bank_name"],
+                        "beneficiary_account_number": ben_account_number,
+                        "iban": data["iban"],
+                        "bic": data["iban"]
+                    }
+                    transaction = Transaction(**trans_info)
+                    transaction.beneficiary = [Beneficiary(**beneficiary_info)]
+                    client.transaction = [transaction]
+                    session.commit()
+                    return True, enum.TRANSFER_OK
+            else:
+                return False, enum.ACCOUNT_NUMBER_ERROR
+
+    start_transfer = classmethod(start_transfer)
+
+
+class BankTeller(Employee):
+    """"
+    BankTeller Module. Inherited from Employee
+    This class represent bank_teller and handle common operations in counter
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'bank_teller'
+    }
+
+    def start_transfer(cls, data):
+        session = Session()
+        if data is None:
+            debited_account = data["debited_account_number"]
+            client_id = Client.get_id_by_account_number(debited_account, session=session)
+            if client_id is not None:
+                client, _ = Client.get_by_account_number(debited_account, exist=True, session=session)
+                if client.balance < data["amount"]:
+                    return False, enum.AMOUNT_ERROR
+                else:
+                    ben_account_number = data["ben_account_number"]
+                    ref = hashlib.sha1("{}{}{}".format(debited_account, ben_account_number,
+                                                       client_id).encode()).hexdigest()
+
+                    trans_info = {
+                        "ref": ref,
+                        "label": data["label"],
+                        "amount": data["amount"],
+                        "trans_type": data["trans_type"]
+                    }
+                    beneficiary_info = {
+                        "beneficiary": data["name"],
+                        "bank_name": data["bank_name"],
+                        "beneficiary_account_number": ben_account_number,
+                        "iban": data["iban"],
+                        "bic": data["iban"]
+                    }
+                    transaction = Transaction(**trans_info)
+                    transaction.beneficiary = [Beneficiary(**beneficiary_info)]
+                    client.transaction = [transaction]
+                    session.commit()
+                    return True, enum.TRANSFER_OK
+            else:
+                return False, enum.ACCOUNT_NUMBER_ERROR
+
+    start_transfer = classmethod(start_transfer)

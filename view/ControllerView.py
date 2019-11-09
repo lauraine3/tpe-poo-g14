@@ -84,7 +84,46 @@ class ControllerView(QWidget):
         self.valid_btn.clicked.connect(self.on_valid_btn_clicked)
         footer_layout.addWidget(self.valid_btn, 0, Qt.AlignRight | Qt.AlignTop)
 
+    def populate_model(self, data, closed_balance, dif_balance):
+        self.closed_balance_amount.setText("<big>%s</big>" % closed_balance)
+        self.dif_balance_amount.setText("<big>%s</big>" % dif_balance)
+        if len(data) == 0:
+            self.empty_data_label.setText("<big>Aucune transaction efpfectue</big>")
+        else:
+            self.model.setRowCount(len(data))
+            self.model.setColumnCount(5)
 
+            for i, line in enumerate(data):
+                for j, column in enumerate(line):
+                    self.model.setItem(i, j, QStandardItem(column))
+
+    def on_valid_btn_clicked(self):
+        self.valid_btn.setEnabled(False)
+        QMessageBox.information(self, "Info", "Cloture de compte journalier effectue avec succes")
+
+        res = QMessageBox.question(self, "Quit app", "Voulez-vous quitter l'application")
+
+        if res == QMessageBox.Yes:
+            qApp.quit()
+
+
+    def on_actualize_btn_clicked(self):
+        if self.valid_btn.isEnabled():
+            self.valid_btn.setEnabled(False)
+            self.update_btn.setDisabled(True)
+            data, closed_b, dif_b = Transaction.get_daily_transaction()
+
+            if data is not None and closed_b is not None:
+                self.populate_model(data, closed_b, dif_b)
+                QMessageBox.information(self, "Actualize", "Actualisation de la table termine")
+            else:
+                QMessageBox.critical(self, "Error", "Impossible d'actulise la table, veillez re-essayer plutard"
+                                                    "ou faite appele a votre DSI")
+            self.update_btn.setEnabled(True)
+            self.valid_btn.setEnabled(True)
+        else:
+            self.update_btn.setDisabled(True)
+            QMessageBox.information(self, "Info", "La table est deja a jour")
 
 
 if __name__ == '__main__':
