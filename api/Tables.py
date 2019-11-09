@@ -26,3 +26,14 @@ class Employee(Base):
 
     def __repr__(self):
         return "<Employee (name_first='%s' last_name='%s' email='%s') >" % (self.first_name, self.last_name, self.email)
+
+
+class Controller(Employee):
+    """"
+    Controller Module. Inherited from Employee
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'controller'
+    }
+
