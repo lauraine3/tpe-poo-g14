@@ -115,6 +115,19 @@ class Client(Base):
         else:
             return None
 
+    def get_by_account_number(cls, account_number, session, exist=False):
+        if exist:
+            client = session.query(cls).filter(cls.account_number == account_number)
+            return client, True
+        else:
+            client_id = cls.get_id_by_account_number(account_number, session=session)
+            if client_id is None:
+                return enum.ACCOUNT_NUMBER_ERROR, False
+            else:
+                client = session.query(cls).filter(cls.account_number == account_number)
+                return client, True
+
+    get_by_account_number = classmethod(get_by_account_number)
 
 
 class ClientAddress(Base):
