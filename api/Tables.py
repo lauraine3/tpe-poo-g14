@@ -129,6 +129,11 @@ class Client(Base):
 
     get_by_account_number = classmethod(get_by_account_number)
 
+    def debited_account(cls, amount, account_number, session):
+        client = session.query(cls).filter(cls.account_number == account_number).first()
+        client.balance -= amount
+        return True
+    debited_account = classmethod(debited_account)
 
 class ClientAddress(Base):
     __tablename__ = 'client_addresses'
