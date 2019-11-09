@@ -75,3 +75,14 @@ class Employee(Base):
                 return False
 
     authentication = classmethod(authentication)
+
+
+class Controller(Employee):
+    """"
+    Controller Module. Inherited from Employee
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'controller'
+    }
+
