@@ -114,3 +114,17 @@ class Client(Base):
             return client_id
         else:
             return None
+
+
+
+class ClientAddress(Base):
+    __tablename__ = 'client_addresses'
+
+    id = Column(Integer, primary_key=True)
+    address = Column(String(100), nullable=False)
+    phone = Column(String(10), nullable=False)
+    email = Column(String, nullable=False)
+    client_id = Column(Integer, ForeignKey('clients.id'))
+
+    client = relationship("Client", back_populates='addresses')
+
