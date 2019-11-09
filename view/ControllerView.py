@@ -84,6 +84,18 @@ class ControllerView(QWidget):
         self.valid_btn.clicked.connect(self.on_valid_btn_clicked)
         footer_layout.addWidget(self.valid_btn, 0, Qt.AlignRight | Qt.AlignTop)
 
+    def populate_model(self, data, closed_balance, dif_balance):
+        self.closed_balance_amount.setText("<big>%s</big>" % closed_balance)
+        self.dif_balance_amount.setText("<big>%s</big>" % dif_balance)
+        if len(data) == 0:
+            self.empty_data_label.setText("<big>Aucune transaction efpfectue</big>")
+        else:
+            self.model.setRowCount(len(data))
+            self.model.setColumnCount(5)
+
+            for i, line in enumerate(data):
+                for j, column in enumerate(line):
+                    self.model.setItem(i, j, QStandardItem(column))
 
 
 
