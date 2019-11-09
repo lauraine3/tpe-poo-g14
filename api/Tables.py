@@ -107,4 +107,10 @@ class Client(Base):
     # relationship
     addresses = relationship('ClientAddress', back_populates='client', cascade='all, delete, delete-orphan')
     transaction = relationship('Transaction', back_populates='client', cascade='all, delete, delete-orphan')
-    
+
+    def get_id_by_account_number(cls, account_num, session):
+        client_id, = session.query(cls.id).filter(cls.account_number == account_num).first()
+        if client_id is not None:
+            return client_id
+        else:
+            return None
