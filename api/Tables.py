@@ -135,6 +135,22 @@ class Client(Base):
         return True
     debited_account = classmethod(debited_account)
 
+    def get_balance(cls, account_num, session, exist=False):
+        if exist:
+            amount, = session.query(cls.balance).filter(cls.account_number == account_num).first()
+            return amount
+        else:
+            client_id = cls.get_id_by_account_number(account_num, session=session)
+            if client_id is None:
+                return False
+            else:
+                amount, = session.query(cls.balance).filter(cls.account_number == account_num).first()
+                return amount
+
+    get_balance = classmethod(get_balance)
+
+
+
 class ClientAddress(Base):
     __tablename__ = 'client_addresses'
 
