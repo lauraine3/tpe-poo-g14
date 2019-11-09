@@ -83,3 +83,13 @@ class ControllerView(QWidget):
         self.valid_btn = QPushButton("VALID")
         self.valid_btn.clicked.connect(self.on_valid_btn_clicked)
         footer_layout.addWidget(self.valid_btn, 0, Qt.AlignRight | Qt.AlignTop)
+
+
+
+
+if __name__ == '__main__':
+    import sys
+    app = QApplication(sys.argv)
+    win = ControllerView()
+    win.show()
+    app.exec_()
