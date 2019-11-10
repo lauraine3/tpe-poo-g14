@@ -115,6 +115,53 @@ class Client(Base):
         else:
             return None
 
+    def get_by_account_number(cls, account_number, session, exist=False):
+        if exist:
+            client = session.query(cls).filter(cls.account_number == account_number)
+            return client, True
+        else:
+            client_id = cls.get_id_by_account_number(account_number, session=session)
+            if client_id is None:
+                return enum.ACCOUNT_NUMBER_ERROR, False
+            else:
+                client = session.query(cls).filter(cls.account_number == account_number)
+                return client, True
+
+    get_by_account_number = classmethod(get_by_account_number)
+
+    def debited_account(cls, amount, account_number, session):
+        client = session.query(cls).filter(cls.account_number == account_number).first()
+        client.balance -= amount
+        return True
+    debited_account = classmethod(debited_account)
+
+    def get_balance(cls, account_num, session, exist=False):
+        if exist:
+            amount, = session.query(cls.balance).filter(cls.account_number == account_num).first()
+            return amount
+        else:
+            client_id = cls.get_id_by_account_number(account_num, session=session)
+            if client_id is None:
+                return False
+            else:
+                amount, = session.query(cls.balance).filter(cls.account_number == account_num).first()
+                return amount
+
+    get_balance = classmethod(get_balance)
+
+
+
+class ClientAddress(Base):
+    __tablename__ = 'client_addresses'
+
+    id = Column(Integer, primary_key=True)
+    address = Column(String(100), nullable=False)
+    phone = Column(String(10), nullable=False)
+    email = Column(String, nullable=False)
+    client_id = Column(Integer, ForeignKey('clients.id'))
+
+    client = relationship("Client", back_populates='addresses')
+
 
 class BankTeller(Employee):
     """"
@@ -162,3 +209,4 @@ class BankTeller(Employee):
                 return False, enum.ACCOUNT_NUMBER_ERROR
 
     start_transfer = classmethod(start_transfer)
+    
