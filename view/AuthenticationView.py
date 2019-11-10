@@ -70,3 +70,20 @@ class AuthenticationView(QWidget):
 
         if r.isChecked():
             self.radio_btn = r.role
+
+    def on_submit_btn_clicked(self):
+        label = QLabel("Interface non developper")
+        self.radio_btn_group.setDisabled(True)
+        if Employee.authentication(self.email.text(), self.password.text(), self.radio_btn):
+            if self.radio_btn == "bank_teller":
+                self.main_win.setCentralWidget(BankTellerView())
+            elif self.radio_btn == "controller":
+                self.main_win.setCentralWidget(ControllerView())
+            elif self.radio_btn == "branch_manager":
+                self.main_win.setCentralWidget(label)
+            elif self.radio_btn == "manager":
+                self.main_win.setCentralWidget(ManagerView())
+        else:
+            QMessageBox.critical(self, "Error", "Email/password/profession incorrect")
+            self.radio_btn_group.setEnabled(True)
+
