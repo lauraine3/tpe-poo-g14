@@ -64,3 +64,9 @@ class AuthenticationView(QWidget):
         self.submit_btn = QPushButton("SUBMIT")
         self.submit_btn.clicked.connect(self.on_submit_btn_clicked)
         main_layout.addWidget(self.submit_btn, 0, Qt.AlignRight | Qt.AlignTop)
+
+    def on_radio_btn_toggled(self):
+        r = self.sender()
+
+        if r.isChecked():
+            self.radio_btn = r.role
