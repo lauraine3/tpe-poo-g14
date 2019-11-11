@@ -250,7 +250,8 @@ class Transaction(Base):
         return transaction, started_balance, tmp_started_balance - started_balance
 
     get_daily_transaction = classmethod(get_daily_transaction)
-=======
+
+
 class Company(Base):
     """Company Modele"""
 
