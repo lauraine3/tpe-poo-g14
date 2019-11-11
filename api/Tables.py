@@ -211,7 +211,6 @@ class BankTeller(Employee):
     start_transfer = classmethod(start_transfer)
 
 
-
 class Transaction(Base):
     """Client Transaction Module"""
 
@@ -251,3 +250,63 @@ class Transaction(Base):
         return transaction, started_balance, tmp_started_balance - started_balance
 
     get_daily_transaction = classmethod(get_daily_transaction)
+=======
+class Company(Base):
+    """Company Modele"""
+
+    __tablename__ = 'companies'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    balance = Column(String, nullable=False)
+    iban = Column(String, nullable=False)
+    bic = Column(String, nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
+
+    addresses = relationship("CompanyAddress", back_populates='company', cascade='all, delete, delete-orphan')
+
+    def __repr__(self):
+        return "<Company (name='%s') >" % self.name
+
+    def configure(cls, company_data):
+        session = Session()
+        bank = Company(**company_data["company"])
+        bank.addresses = [CompanyAddress(**company_data["address"])]
+        session.add(bank)
+        session.commit()
+        return True
+    configure = classmethod(configure)
+
+
+
+class CompanyAddress(Base):
+    """Company Address Module"""
+
+    __tablename__ = 'companyAddress'
+    id = Column(Integer, primary_key=True)
+    country = Column(String(100), nullable=False)
+    street = Column(String, nullable=False)
+    town = Column(String(100), nullable=False)
+    building = Column(String(100), nullable=False)
+    phone = Column(String(10), nullable=False)
+    email = Column(String, nullable=False)
+    bp = Column(String(10), nullable=True)
+    website = Column(String, nullable=True)
+    company_id = Column(Integer, ForeignKey('companies.id'))
+
+    company = relationship("Company", back_populates='addresses')
+
+
+class Beneficiary(Base):
+    __tablename__ = 'beneficiaries'
+
+    id = Column(Integer, primary_key=True)
+    beneficiary = Column(String, nullable=False)
+    bank_name = Column(String, nullable=False)
+    beneficiary_account_number = Column(String, nullable=False)
+    iban = Column(String, nullable=True)
+    bic = Column(String, nullable=False)
+    # transaction_id = Column(Integer, ForeignKey('transactions.id'))
+
+    client_transaction = relationship("Transaction", back_populates='beneficiary')
+

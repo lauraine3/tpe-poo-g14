@@ -3,6 +3,10 @@
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 
+from api import company_is_exist
+from view.AuthentificationView import AuthenticationView
+from view.CompanyView import BankDataView
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -11,6 +15,12 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(300, 150)
         self._create_action()
         self._create_menu_bar()
+
+        if not company_is_exist:
+            self.setCentralWidget(BankDataView(self))
+        else:
+            self.setCentralWidget(AuthenticationView(self))
+
 
     def _create_action(self):
         act_quit = QAction("Quit")
