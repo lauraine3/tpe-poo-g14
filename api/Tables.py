@@ -211,6 +211,46 @@ class BankTeller(Employee):
     start_transfer = classmethod(start_transfer)
 
 
+class Transaction(Base):
+    """Client Transaction Module"""
+
+    __tablename__ = 'transactions'
+    id = Column(Integer, primary_key=True)
+    ref = Column(String, nullable=False)
+    label = Column(String, nullable=False)
+    amount = Column(Integer, nullable=False)
+    trans_type = Column(String(50), nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
+    beneficiary_id = Column(Integer, ForeignKey('beneficiaries.id'))
+    client_id = Column(Integer, ForeignKey('clients.id'))
+
+    client = relationship("Client", back_populates='transaction')
+    beneficiary = relationship("Beneficiary", back_populates='client_transaction', cascade='all, delete')
+
+    def __repr__(self):
+        return "<Transaction (ref='%s' label='%s' amount='%s' added='%s') >" % (self.ref, self.label,
+                                                                                self.amount, self.added)
+
+    def get_daily_transaction(cls):
+        started_balance = 878798
+        tmp_started_balance = started_balance
+        today = datetime.strptime(str(date.today()), "%Y-%m-%d")
+        day_to_str = today.strftime("%d-%m-%Y")
+        transaction = [[day_to_str, "Solde a l'ouverture", str(started_balance), "", str(started_balance)]]
+        session = Session()
+
+        for label, amount, trans_type in session.query(Transaction.label, Transaction.amount,
+                                                       Transaction.trans_type).filter(Transaction.added == today):
+            if trans_type in ["withdrawal", "external_trans"]:
+                started_balance -= amount
+                transaction.append([day_to_str, label, "", str(amount), str(started_balance)])
+            elif trans_type in ["internal_trans", "deposit"]:
+                started_balance += amount
+                transaction.append([day_to_str, label, str(amount), "", str(started_balance)])
+        return transaction, started_balance, tmp_started_balance - started_balance
+
+    get_daily_transaction = classmethod(get_daily_transaction)
+=======
 class Company(Base):
     """Company Modele"""
 
@@ -269,3 +309,4 @@ class Beneficiary(Base):
     # transaction_id = Column(Integer, ForeignKey('transactions.id'))
 
     client_transaction = relationship("Transaction", back_populates='beneficiary')
+
