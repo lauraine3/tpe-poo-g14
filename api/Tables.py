@@ -320,3 +320,73 @@ class Beneficiary(Base):
 
     client_transaction = relationship("Transaction", back_populates='beneficiary')
 
+class Manager(Employee):
+    """"
+    Manager Module. Inherited from Employee.
+    This class represent manager and handle manager operation
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'manager'
+    }
+
+    def _generate_account_number(cls, session):
+        try:
+            session.query(Client).one()
+            last_account_no, = session.query(Client.account_number).all()[-1:][0]
+            print(last_account_no)
+            last_account_no = int(str(last_account_no).replace("A", ""))
+            last_account_no += 1
+            return str(last_account_no)+"A"
+        except exc.MultipleResultsFound as e:
+            last_account_no, = session.query(Client.account_number).all()[-1:][0]
+            print(last_account_no)
+            last_account_no = int(str(last_account_no).replace("A", ""))
+            last_account_no += 1
+            return str(last_account_no) + "A"
+        except exc.NoResultFound as e:
+            return "100000000A"
+
+    _generate_account_number = classmethod(_generate_account_number)
+
+    def add_client(cls, data):
+        session = Session()
+        data["general_info"]["account_number"] = cls._generate_account_number(session)
+        data["general_info"]["birth_date"] = datetime.strptime(data["general_info"]["birth_date"], "%d/%m/%Y")
+        new_client = Client(**data["general_info"])
+        new_client.addresses = [ClientAddress(**data["addresses"])]
+
+        session.add(new_client)
+        session.commit()
+        iban, bic, bank_name, address = session.query(Company.iban, Company.bic,
+                                                        Company.name, CompanyAddress.building).first()
+        print(iban, address)
+        return {
+            "iban": iban,
+            "bic": bic,
+            "bank_name": bank_name,
+            "account_number": data["general_info"]["account_number"],
+            "bank_address": address,
+            "name": "%s %s" % (data["general_info"]["first_name"], data["general_info"]["last_name"])
+        }
+
+    add_client = classmethod(add_client)
+
+    def update_client(cls, account_num, new_data):
+        session = Session()
+        client = Client.get_by_account_number(account_num)
+        if client is None:
+            return False
+        else:
+            pass
+    update_client = classmethod(update_client)
+
+    def delete_account(cls, account_number):
+        session = Session()
+        client = Client.get_by_account_number(account_number, session)
+        if client is None:
+            return False
+        else:
+            session.delete(client)
+            return True
+    delete_account = classmethod(delete_account)
