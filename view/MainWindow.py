@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 
 from api import company_is_exist
-from view.AuthentificationView import AuthenticationView
+from view.AuthenticationView import AuthenticationView
 from view.CompanyView import BankDataView
 
 
