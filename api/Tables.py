@@ -211,6 +211,15 @@ class BankTeller(Employee):
     start_transfer = classmethod(start_transfer)
 
 
+class BranchManager(Employee):
+    """
+    BranchManager Module. Inherited from Employee
+    """
+
+    __mapper_args__ = {
+        'polymorphic_identity': 'branch_manager'
+    }
+
 class Transaction(Base):
     """Client Transaction Module"""
 
