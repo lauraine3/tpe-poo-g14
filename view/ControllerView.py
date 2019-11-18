@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
 
-from api.Tables import Transaction
+from api.Tables import Transaction, Controller
 
 
 class ControllerView(QWidget):
@@ -99,12 +99,15 @@ class ControllerView(QWidget):
 
     def on_valid_btn_clicked(self):
         self.valid_btn.setEnabled(False)
-        QMessageBox.information(self, "Info", "CLOTURE DE COMPTE JOURNALIER EFFECTUE AVEC SUCCES")
+        if Controller.validate_daily_transaction():
+            QMessageBox.information(self, "Info", "CLOTURE DE COMPTE JOURNALIER EFFECTUE AVEC SUCCES")
+            res = QMessageBox.question(self, "Quit app", "VOULEZ-VOUS QUITTER L'APPLICATION ?")
 
-        res = QMessageBox.question(self, "Quit app", "VOULEZ-VOUS QUITTER L'APPLICATION ?")
-
-        if res == QMessageBox.Yes:
-            qApp.quit()
+            if res == QMessageBox.Yes:
+                qApp.quit()
+        else:
+            QMessageBox.critical(self, "Error", "UNE ERREUR S'EST PRODUITE, LE COMPTE N'A PAS ETE VALIDE\n"
+                                                "VEUILLEZ VERIFIER A NOUVEAU ET RE-ESSAYER")
 
 
     def on_actualize_btn_clicked(self):
