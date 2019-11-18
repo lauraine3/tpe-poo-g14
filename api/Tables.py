@@ -117,6 +117,7 @@ class Client(Base):
     # relationship
     addresses = relationship('ClientAddress', back_populates='client', cascade='all, delete, delete-orphan')
     transaction = relationship('Transaction', back_populates='client', cascade='all, delete, delete-orphan')
+    internal_operation = relationship('DepositWithdrawal', back_populates='client')
 
     def get_id_by_account_number(cls, account_num, session):
         client_id, = session.query(cls.id).filter(cls.account_number == account_num).first()
@@ -400,3 +401,17 @@ class Manager(Employee):
             session.delete(client)
             return True
     delete_account = classmethod(delete_account)
+
+
+class DepositWithdrawal(Base):
+    __tablename__ = 'client_internal_op'
+
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey('clients.id'))
+    added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
+    requester_name = Column(String, nullable=False)
+    amount = Column(Integer, nullable=False)
+    label = Column(String, nullable=False)
+    operation = Column(String, nullable=False)
+
+    client = relationship('Client', back_populates='internal_operation')
