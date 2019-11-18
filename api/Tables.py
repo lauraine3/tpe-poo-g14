@@ -334,23 +334,36 @@ class Transaction(Base):
                                                                                 self.amount, self.added)
 
     def get_daily_transaction(cls):
-        started_balance = 878798
+        started_balance = Company.get_balance()
         tmp_started_balance = started_balance
         today = datetime.strptime(str(date.today()), "%Y-%m-%d")
         day_to_str = today.strftime("%d-%m-%Y")
-        transaction = [[day_to_str, "Solde a l'ouverture", str(started_balance), "", str(started_balance)]]
+        transaction = [[day_to_str, "Solde a l'ouverture", number_format(str(started_balance)), "",
+                        number_format(str(started_balance))]]
         session = Session()
+
+        for label, amount, operation in session.query(DepositWithdrawal.label, DepositWithdrawal.amount,
+                                                      DepositWithdrawal.operation).filter(DepositWithdrawal.added == today):
+            if operation == "DEPOSIT":
+                started_balance += int(amount)
+                transaction.append([day_to_str, label, number_format(str(amount)), "",
+                                    number_format(str(started_balance))])
+            elif operation == "WITHDRAWAL":
+                started_balance -= int(amount)
+                transaction.append([day_to_str, label, "", number_format(str(amount)),
+                                    number_format(str(started_balance))])
 
         for label, amount, trans_type in session.query(Transaction.label, Transaction.amount,
                                                        Transaction.trans_type).filter(Transaction.added == today):
-            if trans_type in ["withdrawal", "external_trans"]:
-                started_balance -= amount
-                transaction.append([day_to_str, label, "", str(amount), str(started_balance)])
-            elif trans_type in ["internal_trans", "deposit"]:
-                started_balance += amount
-                transaction.append([day_to_str, label, str(amount), "", str(started_balance)])
-        return transaction, started_balance, tmp_started_balance - started_balance
-
+            if trans_type in ["external"]:
+                started_balance -= int(amount)
+                transaction.append([day_to_str, label, "", number_format(str(amount)),
+                                    number_format(str(started_balance))])
+            elif trans_type in ["internal"]:
+                # started_balance += int(amount)
+                transaction.append([day_to_str, label, number_format(str(amount)), number_format(str(amount)),
+                                    number_format(str(started_balance))])
+        return transaction, number_format(str(started_balance)), number_format(str(started_balance - tmp_started_balance))
     get_daily_transaction = classmethod(get_daily_transaction)
 
 
