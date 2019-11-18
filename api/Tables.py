@@ -387,7 +387,7 @@ class Company(Base):
 
     def configure(cls, company_data):
         session = Session()
-        bank = Company(**company_data["company"])
+        bank = Company(**company_data["company"], tmp_balance=company_data["company"]["balance"])
         bank.addresses = [CompanyAddress(**company_data["address"])]
         session.add(bank)
         session.commit()
