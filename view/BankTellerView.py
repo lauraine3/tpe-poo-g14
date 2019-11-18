@@ -156,7 +156,7 @@ class BankTransferView(QWidget):
             self._set_error_message("BENEFICIARY ACCOUNT NUMBER REQUIRED")
             return
         else:
-            self.data["ben_account_type"] = self.beneficiary_account_number_entry.text()
+            self.data["ben_account_number"] = self.beneficiary_account_number_entry.text()
 
         if self.ben_name_and_last_name.text() == "":
             self._set_error_message("BENEFICIARY NAME REQUIRED")
@@ -208,7 +208,7 @@ class BankTransferView(QWidget):
                 self.data["trans_type"] = r.value
                 self.transfer_fee_entry.setEnabled(True)
             else:
-                self.data["tran_type"] = r.value
+                self.data["trans_type"] = r.value
                 self.external_transfer_group.setEnabled(False)
                 self.transfer_fee_entry.setEnabled(False)
 
@@ -279,12 +279,13 @@ class BankWithdrawalDepositView(QWidget):
         if self._init_data():
             self._clear_error_message()
             self.data["operation"] = self.operation_type.currentText()
-            ok, _ = BankTeller.start_deposit_or_withdrawal(self.data)
-            if ok:
+            ok, message = BankTeller.start_deposit_or_withdrawal(self.data)
+            if ok and message == enum.OPERATION_OK:
                 QMessageBox.information(self, "Information", "Operation effectue avec succes")
-            else:
-                QMessageBox.critical(self, "Error", "Operation faillure")
-            self._clear_entry()
+                self._clear_entry()
+            elif not ok and message == enum.ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "OPERATION FAILLURE, ACCOUNTER NUMBER ERROR")
+
 
 
     def on_cancel_btn_clicked(self):

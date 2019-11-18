@@ -121,22 +121,23 @@ class Client(Base):
     internal_operation = relationship('DepositWithdrawal', back_populates='client')
 
     def get_id_by_account_number(cls, account_num, session):
-        client_id, = session.query(cls.id).filter(cls.account_number == account_num).first()
-        if client_id is not None:
+        try:
+            client_id, = session.query(cls.id).filter(cls.account_number == account_num).one()
             return client_id
-        else:
+        except exc.NoResultFound as e:
             return None
+    get_id_by_account_number = classmethod(get_id_by_account_number)
 
     def get_by_account_number(cls, account_number, session, exist=False):
         if exist:
-            client = session.query(cls).filter(cls.account_number == account_number)
+            client = session.query(cls).filter(cls.account_number == account_number).first()
             return client, True
         else:
             client_id = cls.get_id_by_account_number(account_number, session=session)
             if client_id is None:
                 return enum.ACCOUNT_NUMBER_ERROR, False
             else:
-                client = session.query(cls).filter(cls.account_number == account_number)
+                client = session.query(cls).filter(cls.account_number == account_number).first()
                 return client, True
 
     get_by_account_number = classmethod(get_by_account_number)
@@ -271,10 +272,9 @@ class BankTeller(Employee):
 
     def start_deposit_or_withdrawal(cls, data):
         if data is not None:
-            print(data)
             session = Session()
             account_number = data["account_number"]
-            client_id = Client.get_id_by_account_number(account_number, session=session)
+            client_id = Client.get_id_by_account_number(account_num=account_number, session=session)
             if client_id is not None:
                 client, _ = Client.get_by_account_number(account_number, session=session, exist=True)
                 info = {
@@ -284,7 +284,6 @@ class BankTeller(Employee):
                     "operation": data["operation"]
                 }
                 if data["operation"] == "DEPOSIT":
-
                     client.internal_operation = [DepositWithdrawal(**info)]
                     client.balance += int(data["amount"])
                     Company.update_balance(amount=data["amount"], operation="add", session=session)
@@ -373,7 +372,7 @@ class Company(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    balance = Column(String, nullable=False)
+    balance = Column(Integer, nullable=False)
     tmp_balance = Column(Integer, nullable=False)
     iban = Column(String, nullable=False)
     bic = Column(String, nullable=False)
