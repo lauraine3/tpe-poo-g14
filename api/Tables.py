@@ -323,7 +323,6 @@ class Transaction(Base):
     amount = Column(Integer, nullable=False)
     trans_type = Column(String(50), nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
-    beneficiary_id = Column(Integer, ForeignKey('beneficiaries.id'))
     client_id = Column(Integer, ForeignKey('clients.id'))
 
     client = relationship("Client", back_populates='transaction')
@@ -438,7 +437,7 @@ class Beneficiary(Base):
     beneficiary_account_number = Column(String, nullable=False)
     iban = Column(String, nullable=True)
     bic = Column(String, nullable=False)
-    # transaction_id = Column(Integer, ForeignKey('transactions.id'))
+    transaction_id = Column(Integer, ForeignKey('transactions.id'))
 
     client_transaction = relationship("Transaction", back_populates='beneficiary')
 
