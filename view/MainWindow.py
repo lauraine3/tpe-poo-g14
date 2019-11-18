@@ -12,7 +12,6 @@ class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.move(300, 0)
-        self.setMinimumSize(300, 150)
         self._create_action()
         self._create_menu_bar()
 
