@@ -217,7 +217,19 @@ class BankWithdrawalDepositView(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         main_layout = QVBoxLayout()
+        self.setMaximumHeight(450)
         self.setLayout(main_layout)
+
+        self.data = {}
+
+        title = QLabel("<big>ENTERED DEPOSIT OR WITHDRAWAL INFORMATION</big>")
+        title.setStyleSheet("background: #29B6F6")
+        title.setMargin(1)
+        main_layout.addWidget(title)
+
+        # error label
+        self.error_label = QLabel()
+        main_layout.addWidget(self.error_label, 0, Qt.AlignCenter)
 
         form_element_group = QGroupBox()
         main_layout.addWidget(form_element_group)
