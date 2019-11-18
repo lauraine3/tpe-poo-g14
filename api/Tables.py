@@ -4,6 +4,8 @@ from sqlalchemy import Column, Integer, String, BOOLEAN, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, exc
 
 from api.config import Base, Session
+from api import enum
+from api.fonctions import fake_external_transfer_api, number_format
 
 class Employee(Base):
     """Employe modele"""
@@ -85,6 +87,14 @@ class Controller(Employee):
     __mapper_args__ = {
         'polymorphic_identity': 'controller'
     }
+
+    def validate_daily_transaction(cls):
+        session = Session()
+        bank = session.query(Company).first()
+        bank.balance = bank.tmp_balance
+        session.commit()
+        return True
+    validate_daily_transaction = classmethod(validate_daily_transaction)
 
 class Client(Base):
     """Client Module"""
