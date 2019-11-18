@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 
 from api.Tables import BankTeller
 from view.fonctions import Header
+from api import enum
 
 
 transfer_type = ["INTERNAL TRANSFER", "EXTERNAL TRANSFER", "INTERNATIONAL TRANSFER"]
@@ -122,13 +123,24 @@ class BankTransferView(QWidget):
     def on_valid_btn_clicked(self):
         if self._init_data():
             self._clear_error_message()
-            if not BankTeller.start_transfer(self.data):
-                QMessageBox.critical(self, "Error", "DEBITED ACCOUNT NUMBER IS INCORRECT")
-            else:
+            ok, message = BankTeller.start_transfer(self.data)
+            if not ok and message == enum.ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "DEBITED ACCOUNT NUMBER IS INCORRECT OR NOT EXIST")
+            elif not ok and message == enum.BENEFICIARY_ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "BENEFICIARY ACCOUNT NUMBER IS INCORRECT OR NOT EXIST")
+            elif not ok and message == enum.AMOUNT_ERROR:
+                QMessageBox.critical(self, "Error", "AMOUNT ERROR, YOU CAN'T TRANSFER THIS BALANCE")
+            elif ok and message == enum.TRANSFER_OK:
                 QMessageBox.information(self, "Information", "TRANSFER COMPLETED SUCCESSFUL")
 
     def on_cancel_btn_clicked(self):
-        pass
+        res = QMessageBox.question(self, "Cancel operation", "Voulez-vous vraiment annuler l'operation")
+
+        if res == QMessageBox.Yes:
+            self._clear_entry()
+            self._clear_error_message()
+        else:
+            return
 
     def on_account_entry_text_changed(self):
         self.operation_date_label.setText("Date: \t\t"+datetime.date.today().strftime("%d/%m/%Y"))
@@ -175,6 +187,8 @@ class BankTransferView(QWidget):
 
         if self.transfer_fee_entry.isEnabled():
             self.data["transfer_fee"] = int(self.transfer_fee_entry.text())
+        else:
+            self.data["transfer_fee"] = 0
 
         return True
 
