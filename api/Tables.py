@@ -162,6 +162,18 @@ class Client(Base):
 
     get_balance = classmethod(get_balance)
 
+    def get_details(cls, account_number):
+        client, ok = cls.get_by_account_number(account_number, Session())
+
+        if ok:
+            return True, {
+                "name": client.first_name+" "+client.last_name,
+                "account_number": client.account_number,
+                "balance": client.balance
+            }
+        else:
+            return False, None
+    get_details = classmethod(get_details)
 
 
 class ClientAddress(Base):
