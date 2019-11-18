@@ -269,6 +269,40 @@ class BankTeller(Employee):
 
     start_transfer = classmethod(start_transfer)
 
+    def start_deposit_or_withdrawal(cls, data):
+        if data is not None:
+            print(data)
+            session = Session()
+            account_number = data["account_number"]
+            client_id = Client.get_id_by_account_number(account_number, session=session)
+            if client_id is not None:
+                client, _ = Client.get_by_account_number(account_number, session=session, exist=True)
+                info = {
+                    "requester_name": data["requester_name"],
+                    "amount": int(data["amount"]),
+                    "label": data["comment"],
+                    "operation": data["operation"]
+                }
+                if data["operation"] == "DEPOSIT":
+
+                    client.internal_operation = [DepositWithdrawal(**info)]
+                    client.balance += int(data["amount"])
+                    Company.update_balance(amount=data["amount"], operation="add", session=session)
+                    session.commit()
+                    return True, enum.OPERATION_OK
+                elif data["operation"] == "WITHDRAWAL":
+                    client.internal_operation = [DepositWithdrawal(**info)]
+                    client.balance -= int(data["amount"])
+                    Company.update_balance(amount=data["amount"], operation="sub", session=session)
+                    session.commit()
+                    return True, enum.OPERATION_OK
+            else:
+                return False, enum.ACCOUNT_NUMBER_ERROR
+        else:
+            return False, enum.DATA_ERROR
+
+    start_deposit_or_withdrawal = classmethod(start_deposit_or_withdrawal)
+
 
 class BranchManager(Employee):
     """
