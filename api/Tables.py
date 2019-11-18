@@ -1,9 +1,12 @@
 from datetime import date, datetime
+import hashlib
 
 from sqlalchemy import Column, Integer, String, BOOLEAN, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, exc
 
 from api.config import Base, Session
+from api import enum
+from api.fonctions import fake_external_transfer_api, number_format
 
 class Employee(Base):
     """Employe modele"""
@@ -86,6 +89,14 @@ class Controller(Employee):
         'polymorphic_identity': 'controller'
     }
 
+    def validate_daily_transaction(cls):
+        session = Session()
+        bank = session.query(Company).first()
+        bank.balance = bank.tmp_balance
+        session.commit()
+        return True
+    validate_daily_transaction = classmethod(validate_daily_transaction)
+
 class Client(Base):
     """Client Module"""
 
@@ -107,24 +118,26 @@ class Client(Base):
     # relationship
     addresses = relationship('ClientAddress', back_populates='client', cascade='all, delete, delete-orphan')
     transaction = relationship('Transaction', back_populates='client', cascade='all, delete, delete-orphan')
+    internal_operation = relationship('DepositWithdrawal', back_populates='client')
 
     def get_id_by_account_number(cls, account_num, session):
-        client_id, = session.query(cls.id).filter(cls.account_number == account_num).first()
-        if client_id is not None:
+        try:
+            client_id, = session.query(cls.id).filter(cls.account_number == account_num).one()
             return client_id
-        else:
+        except exc.NoResultFound as e:
             return None
+    get_id_by_account_number = classmethod(get_id_by_account_number)
 
     def get_by_account_number(cls, account_number, session, exist=False):
         if exist:
-            client = session.query(cls).filter(cls.account_number == account_number)
+            client = session.query(cls).filter(cls.account_number == account_number).first()
             return client, True
         else:
             client_id = cls.get_id_by_account_number(account_number, session=session)
             if client_id is None:
                 return enum.ACCOUNT_NUMBER_ERROR, False
             else:
-                client = session.query(cls).filter(cls.account_number == account_number)
+                client = session.query(cls).filter(cls.account_number == account_number).first()
                 return client, True
 
     get_by_account_number = classmethod(get_by_account_number)
@@ -173,42 +186,121 @@ class BankTeller(Employee):
         'polymorphic_identity': 'bank_teller'
     }
 
+    def _init_transaction_data(cls, d_account, b_account, c_id, ben_name, o_data, session):
+        transfer_ref = hashlib.sha1("{}{}{}{}".format(d_account, b_account,
+                                                      c_id, datetime.now().timestamp()).encode()).hexdigest()
+        trans_info = {
+            "ref": transfer_ref,
+            "label": o_data["label"],
+            "amount": o_data["amount"],
+            "trans_type": o_data["trans_type"]
+        }
+        if o_data["trans_type"] == "internal":
+            bank = session.query(Company).first()
+            beneficiary_info = {
+                "beneficiary": ben_name,
+                "bank_name": bank.name,
+                "beneficiary_account_number": b_account,
+                "iban": bank.iban,
+                "bic": bank.bic
+            }
+            return trans_info, beneficiary_info
+        elif o_data["trans_type"] in ["external", "international"]:
+            beneficiary_info = {
+                "beneficiary": o_data["ben_name"],
+                "bank_name": o_data["bank_name"],
+                "beneficiary_account_number": b_account,
+                "iban": o_data["iban"],
+                "bic": o_data["iban"]
+            }
+            return trans_info, beneficiary_info
+
+    _init_transaction_data = classmethod(_init_transaction_data)
+
+
     def start_transfer(cls, data):
-        session = Session()
-        if data is None:
+        if data is not None:
+            session = Session()
             debited_account = data["debited_account_number"]
+            ben_account_number = data["ben_account_number"]
             client_id = Client.get_id_by_account_number(debited_account, session=session)
             if client_id is not None:
                 client, _ = Client.get_by_account_number(debited_account, exist=True, session=session)
-                if client.balance < data["amount"]:
+                if client.balance < int(data["amount"] + int(data["transfer_fee"])):
                     return False, enum.AMOUNT_ERROR
                 else:
-                    ben_account_number = data["ben_account_number"]
-                    ref = hashlib.sha1("{}{}{}".format(debited_account, ben_account_number,
-                                                       client_id).encode()).hexdigest()
+                    if data["trans_type"] == "internal":
+                        beneficiary_id = Client.get_id_by_account_number(ben_account_number, session=session)
+                        if beneficiary_id is not None:
+                            ben, _ = Client.get_by_account_number(ben_account_number, exist=True, session=session)
+                            trans_info, beneficiary_info = BankTeller._init_transaction_data(
+                                debited_account, ben_account_number, client_id,
+                                ben.first_name + " " + ben.last_name,
+                                o_data=data, session=session
+                            )
+                            ben.balance += int(data["amount"])
+                            client.balance -= int(data["amount"])
 
-                    trans_info = {
-                        "ref": ref,
-                        "label": data["label"],
-                        "amount": data["amount"],
-                        "trans_type": data["trans_type"]
-                    }
-                    beneficiary_info = {
-                        "beneficiary": data["name"],
-                        "bank_name": data["bank_name"],
-                        "beneficiary_account_number": ben_account_number,
-                        "iban": data["iban"],
-                        "bic": data["iban"]
-                    }
-                    transaction = Transaction(**trans_info)
-                    transaction.beneficiary = [Beneficiary(**beneficiary_info)]
-                    client.transaction = [transaction]
-                    session.commit()
-                    return True, enum.TRANSFER_OK
+                            transaction = Transaction(**trans_info)
+                            transaction.beneficiary = [Beneficiary(**beneficiary_info)]
+                            client.transaction = [transaction]
+
+                            session.commit()
+                            return True, enum.TRANSFER_OK
+                        else:
+                            return False, enum.BENEFICIARY_ACCOUNT_NUMBER_ERROR
+                    elif data["trans_type"] in ["external", "international"]:
+
+                        trans_info, beneficiary_info = BankTeller._init_transaction_data(
+                            debited_account, ben_account_number, client_id, "", o_data=data, session=session
+                        )
+                        amount = (int(data["amount"]) + int(data["transfer_fee"]))
+                        client.balance -= amount
+
+                        transaction = Transaction(**trans_info)
+                        transaction.beneficiary = [Beneficiary(**beneficiary_info)]
+                        client.transaction = [transaction]
+                        Company.update_balance(amount, "sub", session)
+                        session.commit()
+                        return fake_external_transfer_api(data), enum.TRANSFER_OK
             else:
                 return False, enum.ACCOUNT_NUMBER_ERROR
+        else:
+            return False, enum.DATA_ERROR
 
     start_transfer = classmethod(start_transfer)
+
+    def start_deposit_or_withdrawal(cls, data):
+        if data is not None:
+            session = Session()
+            account_number = data["account_number"]
+            client_id = Client.get_id_by_account_number(account_num=account_number, session=session)
+            if client_id is not None:
+                client, _ = Client.get_by_account_number(account_number, session=session, exist=True)
+                info = {
+                    "requester_name": data["requester_name"],
+                    "amount": int(data["amount"]),
+                    "label": data["comment"],
+                    "operation": data["operation"]
+                }
+                if data["operation"] == "DEPOSIT":
+                    client.internal_operation = [DepositWithdrawal(**info)]
+                    client.balance += int(data["amount"])
+                    Company.update_balance(amount=data["amount"], operation="add", session=session)
+                    session.commit()
+                    return True, enum.OPERATION_OK
+                elif data["operation"] == "WITHDRAWAL":
+                    client.internal_operation = [DepositWithdrawal(**info)]
+                    client.balance -= int(data["amount"])
+                    Company.update_balance(amount=data["amount"], operation="sub", session=session)
+                    session.commit()
+                    return True, enum.OPERATION_OK
+            else:
+                return False, enum.ACCOUNT_NUMBER_ERROR
+        else:
+            return False, enum.DATA_ERROR
+
+    start_deposit_or_withdrawal = classmethod(start_deposit_or_withdrawal)
 
 
 class BranchManager(Employee):
@@ -230,7 +322,6 @@ class Transaction(Base):
     amount = Column(Integer, nullable=False)
     trans_type = Column(String(50), nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
-    beneficiary_id = Column(Integer, ForeignKey('beneficiaries.id'))
     client_id = Column(Integer, ForeignKey('clients.id'))
 
     client = relationship("Client", back_populates='transaction')
@@ -241,23 +332,36 @@ class Transaction(Base):
                                                                                 self.amount, self.added)
 
     def get_daily_transaction(cls):
-        started_balance = 878798
+        started_balance = Company.get_balance()
         tmp_started_balance = started_balance
         today = datetime.strptime(str(date.today()), "%Y-%m-%d")
         day_to_str = today.strftime("%d-%m-%Y")
-        transaction = [[day_to_str, "Solde a l'ouverture", str(started_balance), "", str(started_balance)]]
+        transaction = [[day_to_str, "Solde a l'ouverture", number_format(str(started_balance)), "",
+                        number_format(str(started_balance))]]
         session = Session()
+
+        for label, amount, operation in session.query(DepositWithdrawal.label, DepositWithdrawal.amount,
+                                                      DepositWithdrawal.operation).filter(DepositWithdrawal.added == today):
+            if operation == "DEPOSIT":
+                started_balance += int(amount)
+                transaction.append([day_to_str, label, number_format(str(amount)), "",
+                                    number_format(str(started_balance))])
+            elif operation == "WITHDRAWAL":
+                started_balance -= int(amount)
+                transaction.append([day_to_str, label, "", number_format(str(amount)),
+                                    number_format(str(started_balance))])
 
         for label, amount, trans_type in session.query(Transaction.label, Transaction.amount,
                                                        Transaction.trans_type).filter(Transaction.added == today):
-            if trans_type in ["withdrawal", "external_trans"]:
-                started_balance -= amount
-                transaction.append([day_to_str, label, "", str(amount), str(started_balance)])
-            elif trans_type in ["internal_trans", "deposit"]:
-                started_balance += amount
-                transaction.append([day_to_str, label, str(amount), "", str(started_balance)])
-        return transaction, started_balance, tmp_started_balance - started_balance
-
+            if trans_type in ["external"]:
+                started_balance -= int(amount)
+                transaction.append([day_to_str, label, "", number_format(str(amount)),
+                                    number_format(str(started_balance))])
+            elif trans_type in ["internal"]:
+                # started_balance += int(amount)
+                transaction.append([day_to_str, label, number_format(str(amount)), number_format(str(amount)),
+                                    number_format(str(started_balance))])
+        return transaction, number_format(str(started_balance)), number_format(str(started_balance - tmp_started_balance))
     get_daily_transaction = classmethod(get_daily_transaction)
 
 
@@ -268,7 +372,8 @@ class Company(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
-    balance = Column(String, nullable=False)
+    balance = Column(Integer, nullable=False)
+    tmp_balance = Column(Integer, nullable=False)
     iban = Column(String, nullable=False)
     bic = Column(String, nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
@@ -280,13 +385,28 @@ class Company(Base):
 
     def configure(cls, company_data):
         session = Session()
-        bank = Company(**company_data["company"])
+        bank = Company(**company_data["company"], tmp_balance=company_data["company"]["balance"])
         bank.addresses = [CompanyAddress(**company_data["address"])]
         session.add(bank)
         session.commit()
         return True
     configure = classmethod(configure)
 
+    def update_balance(cls, amount, operation, session):
+        bank = session.query(cls).first()
+        if operation == "add":
+            bank.tmp_balance += int(amount)
+        elif operation == "sub":
+            bank.tmp_balance -= int(amount)
+
+    update_balance = classmethod(update_balance)
+
+    def get_balance(cls):
+        session = Session()
+        balance, = session.query(cls.balance).first()
+        print(balance)
+        return int(balance)
+    get_balance = classmethod(get_balance)
 
 
 class CompanyAddress(Base):
@@ -316,7 +436,7 @@ class Beneficiary(Base):
     beneficiary_account_number = Column(String, nullable=False)
     iban = Column(String, nullable=True)
     bic = Column(String, nullable=False)
-    # transaction_id = Column(Integer, ForeignKey('transactions.id'))
+    transaction_id = Column(Integer, ForeignKey('transactions.id'))
 
     client_transaction = relationship("Transaction", back_populates='beneficiary')
 
@@ -390,3 +510,17 @@ class Manager(Employee):
             session.delete(client)
             return True
     delete_account = classmethod(delete_account)
+
+
+class DepositWithdrawal(Base):
+    __tablename__ = 'client_internal_op'
+
+    id = Column(Integer, primary_key=True)
+    client_id = Column(Integer, ForeignKey('clients.id'))
+    added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
+    requester_name = Column(String, nullable=False)
+    amount = Column(Integer, nullable=False)
+    label = Column(String, nullable=False)
+    operation = Column(String, nullable=False)
+
+    client = relationship('Client', back_populates='internal_operation')

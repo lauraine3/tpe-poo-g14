@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt
 
-from api.Tables import Transaction
+from api.Tables import Transaction, Controller
 
 
 class ControllerView(QWidget):
@@ -88,7 +88,7 @@ class ControllerView(QWidget):
         self.closed_balance_amount.setText("<big>%s</big>" % closed_balance)
         self.dif_balance_amount.setText("<big>%s</big>" % dif_balance)
         if len(data) == 0:
-            self.empty_data_label.setText("<big>Aucune transaction efpfectue</big>")
+            self.empty_data_label.setText("<big>AUCUNE TRANSACTION EFFECTUEE</big>")
         else:
             self.model.setRowCount(len(data))
             self.model.setColumnCount(5)
@@ -99,12 +99,15 @@ class ControllerView(QWidget):
 
     def on_valid_btn_clicked(self):
         self.valid_btn.setEnabled(False)
-        QMessageBox.information(self, "Info", "Cloture de compte journalier effectue avec succes")
+        if Controller.validate_daily_transaction():
+            QMessageBox.information(self, "Info", "CLOTURE DE COMPTE JOURNALIER EFFECTUE AVEC SUCCES")
+            res = QMessageBox.question(self, "Quit app", "VOULEZ-VOUS QUITTER L'APPLICATION ?")
 
-        res = QMessageBox.question(self, "Quit app", "Voulez-vous quitter l'application")
-
-        if res == QMessageBox.Yes:
-            qApp.quit()
+            if res == QMessageBox.Yes:
+                qApp.quit()
+        else:
+            QMessageBox.critical(self, "Error", "UNE ERREUR S'EST PRODUITE, LE COMPTE N'A PAS ETE VALIDE\n"
+                                                "VEUILLEZ VERIFIER A NOUVEAU ET RE-ESSAYER")
 
 
     def on_actualize_btn_clicked(self):
@@ -115,15 +118,14 @@ class ControllerView(QWidget):
 
             if data is not None and closed_b is not None:
                 self.populate_model(data, closed_b, dif_b)
-                QMessageBox.information(self, "Actualize", "Actualisation de la table termine")
+                QMessageBox.information(self, "Actualize", "TABLE ACTUALISEE")
             else:
-                QMessageBox.critical(self, "Error", "Impossible d'actulise la table, veillez re-essayer plutard"
-                                                    "ou faite appele a votre DSI")
+                QMessageBox.critical(self, "Error", "IMPOSSIBLE D'ACTUALISER LA TABLE, RE-ESSAYER PLUTARD")
             self.update_btn.setEnabled(True)
             self.valid_btn.setEnabled(True)
         else:
             self.update_btn.setDisabled(True)
-            QMessageBox.information(self, "Info", "La table est deja a jour")
+            QMessageBox.information(self, "Info", "LA TABLE EST A JOUR")
 
 
 if __name__ == '__main__':

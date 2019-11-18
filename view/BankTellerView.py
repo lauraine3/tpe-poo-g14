@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt
 
 from api.Tables import BankTeller
 from view.fonctions import Header
+from api import enum
 
 
 transfer_type = ["INTERNAL TRANSFER", "EXTERNAL TRANSFER", "INTERNATIONAL TRANSFER"]
@@ -122,13 +123,24 @@ class BankTransferView(QWidget):
     def on_valid_btn_clicked(self):
         if self._init_data():
             self._clear_error_message()
-            if not BankTeller.start_transfer(self.data):
-                QMessageBox.critical(self, "Error", "DEBITED ACCOUNT NUMBER IS INCORRECT")
-            else:
+            ok, message = BankTeller.start_transfer(self.data)
+            if not ok and message == enum.ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "DEBITED ACCOUNT NUMBER IS INCORRECT OR NOT EXIST")
+            elif not ok and message == enum.BENEFICIARY_ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "BENEFICIARY ACCOUNT NUMBER IS INCORRECT OR NOT EXIST")
+            elif not ok and message == enum.AMOUNT_ERROR:
+                QMessageBox.critical(self, "Error", "AMOUNT ERROR, YOU CAN'T TRANSFER THIS BALANCE")
+            elif ok and message == enum.TRANSFER_OK:
                 QMessageBox.information(self, "Information", "TRANSFER COMPLETED SUCCESSFUL")
 
     def on_cancel_btn_clicked(self):
-        pass
+        res = QMessageBox.question(self, "Cancel operation", "Voulez-vous vraiment annuler l'operation")
+
+        if res == QMessageBox.Yes:
+            self._clear_entry()
+            self._clear_error_message()
+        else:
+            return
 
     def on_account_entry_text_changed(self):
         self.operation_date_label.setText("Date: \t\t"+datetime.date.today().strftime("%d/%m/%Y"))
@@ -144,7 +156,7 @@ class BankTransferView(QWidget):
             self._set_error_message("BENEFICIARY ACCOUNT NUMBER REQUIRED")
             return
         else:
-            self.data["ben_account_type"] = self.beneficiary_account_number_entry.text()
+            self.data["ben_account_number"] = self.beneficiary_account_number_entry.text()
 
         if self.ben_name_and_last_name.text() == "":
             self._set_error_message("BENEFICIARY NAME REQUIRED")
@@ -175,6 +187,8 @@ class BankTransferView(QWidget):
 
         if self.transfer_fee_entry.isEnabled():
             self.data["transfer_fee"] = int(self.transfer_fee_entry.text())
+        else:
+            self.data["transfer_fee"] = 0
 
         return True
 
@@ -194,7 +208,7 @@ class BankTransferView(QWidget):
                 self.data["trans_type"] = r.value
                 self.transfer_fee_entry.setEnabled(True)
             else:
-                self.data["tran_type"] = r.value
+                self.data["trans_type"] = r.value
                 self.external_transfer_group.setEnabled(False)
                 self.transfer_fee_entry.setEnabled(False)
 
@@ -203,7 +217,19 @@ class BankWithdrawalDepositView(QWidget):
     def __init__(self):
         QWidget.__init__(self)
         main_layout = QVBoxLayout()
+        self.setMaximumHeight(450)
         self.setLayout(main_layout)
+
+        self.data = {}
+
+        title = QLabel("<big>ENTERED DEPOSIT OR WITHDRAWAL INFORMATION</big>")
+        title.setStyleSheet("background: #29B6F6")
+        title.setMargin(1)
+        main_layout.addWidget(title)
+
+        # error label
+        self.error_label = QLabel()
+        main_layout.addWidget(self.error_label, 0, Qt.AlignCenter)
 
         form_element_group = QGroupBox()
         main_layout.addWidget(form_element_group)
@@ -250,19 +276,74 @@ class BankWithdrawalDepositView(QWidget):
         btn_layout.addWidget(self.cancel_btn, 0, Qt.AlignRight | Qt.AlignTop)
 
     def on_save_btn_clicked(self):
-        pass
+        if self._init_data():
+            self._clear_error_message()
+            self.data["operation"] = self.operation_type.currentText()
+            ok, message = BankTeller.start_deposit_or_withdrawal(self.data)
+            if ok and message == enum.OPERATION_OK:
+                QMessageBox.information(self, "Information", "Operation effectue avec succes")
+                self._clear_entry()
+            elif not ok and message == enum.ACCOUNT_NUMBER_ERROR:
+                QMessageBox.critical(self, "Error", "OPERATION FAILLURE, ACCOUNTER NUMBER ERROR")
+
+
 
     def on_cancel_btn_clicked(self):
         res = QMessageBox.question(self, "Cancel operation", "Voulez-vous vraiment annuler l'operation")
 
         if res == QMessageBox.Yes:
-            return
+            self._clear_entry()
+            self._clear_error_message()
         else:
             return
 
-    def get_data(self):
-        pass
+    def _init_data(self):
+        if self.account_owner_entry.text() == "":
+            self._set_error_message("account owner  name required")
+            return
+        else:
+            self.data["account_owner_name"] = self.account_owner_entry.text()
 
+        if self.requester_name_entry.text() == "":
+            self._set_error_message("requester name required")
+            return
+        else:
+            self.data["requester_name"] = self.requester_name_entry.text()
+
+        if self.account_number_entry.text() == "":
+            self._set_error_message("account number required")
+            return
+        else:
+            self.data["account_number"] = self.account_number_entry.text()
+
+        if self.amount.text() == "":
+            self._set_error_message("amount required")
+            return
+        else:
+            self.data["amount"] = self.amount.text()
+
+        if self.comment_entry.text() == "":
+            self._set_error_message("comment required")
+            return
+        else:
+            self.data["comment"] = self.comment_entry.text()
+
+        return True
+
+    def _set_error_message(self, message):
+        self.error_label.setText(message)
+        self.error_label.setStyleSheet("background: red")
+
+    def _clear_error_message(self):
+        self.error_label.setText("")
+        self.error_label.setStyleSheet("background: white")
+
+    def _clear_entry(self):
+        self.account_number_entry.clear()
+        self.account_owner_entry.clear()
+        self.amount.clear()
+        self.comment_entry.clear()
+        self.account_number_entry.clear()
 
 class BankTellerView(QWidget):
     def __init__(self):
