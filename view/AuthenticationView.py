@@ -78,6 +78,7 @@ class AuthenticationView(QWidget):
             if self.radio_btn == "bank_teller":
                 self.main_win.setCentralWidget(BankTellerView())
             elif self.radio_btn == "controller":
+                self.main_win.setWindowState(Qt.WindowMaximized)
                 self.main_win.setCentralWidget(ControllerView())
             elif self.radio_btn == "branch_manager":
                 self.main_win.setCentralWidget(label)
