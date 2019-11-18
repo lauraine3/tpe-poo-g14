@@ -375,6 +375,7 @@ class Company(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     balance = Column(String, nullable=False)
+    tmp_balance = Column(Integer, nullable=False)
     iban = Column(String, nullable=False)
     bic = Column(String, nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.strptime(str(date.today()), "%Y-%m-%d"))
@@ -393,6 +394,21 @@ class Company(Base):
         return True
     configure = classmethod(configure)
 
+    def update_balance(cls, amount, operation, session):
+        bank = session.query(cls).first()
+        if operation == "add":
+            bank.tmp_balance += int(amount)
+        elif operation == "sub":
+            bank.tmp_balance -= int(amount)
+
+    update_balance = classmethod(update_balance)
+
+    def get_balance(cls):
+        session = Session()
+        balance, = session.query(cls.balance).first()
+        print(balance)
+        return int(balance)
+    get_balance = classmethod(get_balance)
 
 
 class CompanyAddress(Base):
