@@ -164,10 +164,10 @@ class BankTransferView(QWidget):
         else:
             self.data["ben_name"] = self.ben_name_and_last_name.text()
 
-        if self.external_transfer_group.isChecked():
+        if self.external_transfer_group.isEnabled():
             if self.iban_code.text() != "" and self.bic_code.text() != "" and self.bank_name.text() != "":
                 self.data["bank_name"] = self.bank_name.text()
-                self.data["iban"] = self.bic_code.text()
+                self.data["iban"] = self.iban_code.text()
                 self.data["bic"] = self.bic_code.text()
             else:
                 self._set_error_message("BANK NAME/IBAN/BIC(SWIFT) REQUIRED")
