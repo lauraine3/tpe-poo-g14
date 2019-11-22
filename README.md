@@ -41,7 +41,7 @@ pour lancer l'application, executer la commande :
 ## Contribuant
 
 - Ousmane Hamadou
-- Youmbi Kuate Lauraine
+- Youmbi Kuate Lauraine   https://youtu.be/-QZ_1XKaUzU
 - Oumar Hassane Adoum
 - Tomte Fidel
 - Fissou Henri Joel
