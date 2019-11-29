@@ -45,7 +45,7 @@ pour lancer l'application, executer la commande :
 - Oumar Hassane Adoum
 - Tomte Fidel
 - Fissou Henri Joel
-- Taiki Payang Parfait
+- Taiki Payang Parfait  README.md 
 - Idriss Adoum Idriss
 - Al-mine Oro Kondi
 - Ibrahim Saleh Annour Aldjabir
